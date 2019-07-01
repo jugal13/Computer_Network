@@ -13,65 +13,64 @@
 
 using namespace ns3;
 
-int main (int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 
   CommandLine cmd;
-  cmd.Parse (argc, argv);
+  cmd.Parse(argc, argv);
 
   // Here, we will explicitly create four nodes.
-  NS_LOG_INFO ("Create nodes.");
+  NS_LOG_INFO("Create nodes.");
   NodeContainer c;
-  c.Create (6);
+  c.Create(6);
 
   // connect all our nodes to a shared channel.
-  NS_LOG_INFO ("Build Topology.");
+  NS_LOG_INFO("Build Topology.");
   CsmaHelper csma;
-  csma.SetChannelAttribute ("DataRate", DataRateValue (DataRate (5000000)));
-  csma.SetChannelAttribute ("Delay", TimeValue (MilliSeconds (2)));
-  csma.SetDeviceAttribute ("EncapsulationMode", StringValue ("Llc"));
-  NetDeviceContainer devs = csma.Install (c);
+  csma.SetChannelAttribute("DataRate", DataRateValue(DataRate(5000000)));
+  csma.SetChannelAttribute("Delay", TimeValue(MilliSeconds(2)));
+  csma.SetDeviceAttribute("EncapsulationMode", StringValue("Llc"));
+  NetDeviceContainer devs = csma.Install(c);
 
   // add an ip stack to all nodes.
-  NS_LOG_INFO ("Add ip stack.");
+  NS_LOG_INFO("Add ip stack.");
   InternetStackHelper ipStack;
-  ipStack.Install (c);
+  ipStack.Install(c);
 
   // assign ip addresses
-  NS_LOG_INFO ("Assign ip addresses.");
+  NS_LOG_INFO("Assign ip addresses.");
   Ipv4AddressHelper ip;
-  ip.SetBase ("192.168.1.0", "255.255.255.0");
-  Ipv4InterfaceContainer addresses = ip.Assign (devs);
+  ip.SetBase("192.168.1.0", "255.255.255.0");
+  Ipv4InterfaceContainer addresses = ip.Assign(devs);
 
-  NS_LOG_INFO ("Create Source");
+  NS_LOG_INFO("Create Source");
   //Config::SetDefault ("ns3::Ipv4RawSocketImpl::Protocol", StringValue ("2"));
-  InetSocketAddress dst = InetSocketAddress (addresses.GetAddress (3));
-  OnOffHelper onoff = OnOffHelper ("ns3::UdpSocketFactory", dst);
-  onoff.SetConstantRate (DataRate (15000));
-  onoff.SetAttribute ("PacketSize", UintegerValue (1200));
+  InetSocketAddress dst = InetSocketAddress(addresses.GetAddress(3));
+  OnOffHelper onoff = OnOffHelper("ns3::UdpSocketFactory", dst);
+  onoff.SetConstantRate(DataRate(15000));
+  onoff.SetAttribute("PacketSize", UintegerValue(1200));
 
+  ApplicationContainer apps = onoff.Install(c.Get(0));
+  apps.Start(Seconds(1.0));
+  apps.Stop(Seconds(10.0));
 
-  ApplicationContainer apps = onoff.Install (c.Get (0));
-  apps.Start (Seconds (1.0));
-  apps.Stop (Seconds (10.0));
+  NS_LOG_INFO("Create Sink.");
+  PacketSinkHelper sink = PacketSinkHelper("ns3::Ipv4RawSocketFactory", dst);
+  apps = sink.Install(c.Get(3));
+  apps.Start(Seconds(0.0));
+  apps.Stop(Seconds(11.0));
 
-  NS_LOG_INFO ("Create Sink.");
-  PacketSinkHelper sink = PacketSinkHelper ("ns3::Ipv4RawSocketFactory", dst);
-  apps = sink.Install (c.Get (3));
-  apps.Start (Seconds (0.0));
-  apps.Stop (Seconds (11.0));
-
-  NS_LOG_INFO ("Create pinger");
-  V4PingHelper ping = V4PingHelper (addresses.GetAddress (2));
+  NS_LOG_INFO("Create pinger");
+  V4PingHelper ping = V4PingHelper(addresses.GetAddress(2));
   NodeContainer pingers;
-  pingers.Add (c.Get (0));
-  pingers.Add (c.Get (1));
-  pingers.Add (c.Get (3));
-  pingers.Add (c.Get (4));
-  pingers.Add (c.Get (5));
-  apps = ping.Install (pingers);
-  apps.Start (Seconds (2.0));
-  apps.Stop (Seconds (5.0));
+  pingers.Add(c.Get(0));
+  pingers.Add(c.Get(1));
+  pingers.Add(c.Get(3));
+  pingers.Add(c.Get(4));
+  pingers.Add(c.Get(5));
+  apps = ping.Install(pingers);
+  apps.Start(Seconds(2.0));
+  apps.Stop(Seconds(5.0));
 
   Simulator::Stop(Seconds(simulationTime + 5));
   FlowMonitorHelper flowmon;
@@ -90,6 +89,6 @@ int main (int argc, char *argv[])
     NS_LOG_UNCOND("  Rx Packet:   " << i->second.rxPackets << "\n");
     NS_LOG_UNCOND("  Throughput: " << i->second.rxBytes * 8.0 / (i->second.timeLastRxPacket.GetSeconds() - i->second.timeFirstTxPacket.GetSeconds()) / 1024 / 1024 << " Mbps\n");
   }
-  Simulator::Destroy ();
-  NS_LOG_INFO ("Done.");
+  Simulator::Destroy();
+  NS_LOG_INFO("Done.");
 }
